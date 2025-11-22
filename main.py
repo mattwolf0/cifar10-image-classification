@@ -32,9 +32,46 @@ def get_loaders(data_root="./data", batch_size=128, workers=2):
 
     return train_ld, test_ld
 
+def run_epoch(model, loader, criterion, optimizer=None, device="cpu"):
+
+    train_mode = optimizer is not None
+    if train_mode:
+        model.train()
+    else:
+        model.eval()
+
+    total = 0
+    correct = 0
+    loss_sum = 0.0
+
+    context = torch.enable_grad() if train_mode else torch.no_grad()
+    with context:
+        for x, y in loader:
+            x = x.to(device)
+            y = y.to(device)
+
+            if train_mode:
+                optimizer.zero_grad()
+
+            logits = model(x) #[B, 10] logit
+            loss = criterion(logits, y) #CE loss
+
+            if train_mode:
+                loss.backward()
+                optimizer.step()
+
+            loss_sum += loss.item() * x.size(0)
+            preds = logits.argmax(dim=1)
+            correct += (preds == y).sum().item()
+            total += y.size(0)
+
+    avg_loss = loss_sum / total
+    accuracy = correct / total
+    return avg_loss, accuracy
+
 
 def main():
-    return 0
+    set_seed(42)
 
 
 if __name__ == "__main__":
